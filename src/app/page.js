@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SIDES, computeResults, todayLocalISO } from '@/lib/calculations';
+import {
+  DEFAULT_INJURED,
+  DEFAULT_POPULATION,
+  buildInterpretation,
+} from '@/lib/interpretation';
 import { generateReport } from '@/lib/report';
 import AppHeader from '@/components/AppHeader';
 import ActionsBar from '@/components/ActionsBar';
@@ -10,7 +15,9 @@ import InterpretationCard from '@/components/InterpretationCard';
 import LimbLengthCard from '@/components/LimbLengthCard';
 import LoginScreen from '@/components/LoginScreen';
 import PatientForm from '@/components/PatientForm';
+import ProfileCard from '@/components/ProfileCard';
 import ResultsDashboard from '@/components/ResultsDashboard';
+import StratifiedInterpretation from '@/components/StratifiedInterpretation';
 import Toast from '@/components/Toast';
 
 const AUTH_KEY = 'ybt_auth';
@@ -30,6 +37,8 @@ export default function Home() {
   const [patient, setPatient] = useState(() => ({ name: '', date: '', age: '', evaluator: '' }));
   const [limbs, setLimbs] = useState(makeLimbs);
   const [reaches, setReaches] = useState(makeReaches);
+  const [population, setPopulation] = useState(DEFAULT_POPULATION);
+  const [injuredSide, setInjuredSide] = useState(DEFAULT_INJURED);
 
   // --- Laudo ---
   const [report, setReport] = useState('');
@@ -49,7 +58,15 @@ export default function Home() {
 
   const results = useMemo(() => computeResults(reaches, limbs), [reaches, limbs]);
 
-  const autoReport = useMemo(() => generateReport(patient, results), [patient, results]);
+  const interpretation = useMemo(
+    () => buildInterpretation(results, population, injuredSide),
+    [results, population, injuredSide]
+  );
+
+  const autoReport = useMemo(
+    () => generateReport(patient, results, interpretation),
+    [patient, results, interpretation]
+  );
 
   useEffect(() => {
     if (!reportEdited) setReport(autoReport);
@@ -72,6 +89,7 @@ export default function Home() {
   function buildPayload() {
     return {
       patient,
+      profile: { population, injuredSide },
       limbLengths: limbs,
       reaches,
       results: {
@@ -80,6 +98,16 @@ export default function Home() {
         composite: results.composite,
         compositeStatus: results.compositeStatus,
         asymmetry: results.asymmetry,
+      },
+      interpretation: {
+        population: interpretation.population.key,
+        lsi: { value: interpretation.lsi.value, band: interpretation.lsi.band.key },
+        composite: {
+          left: interpretation.composite.left.band.key,
+          right: interpretation.composite.right.band.key,
+        },
+        anterior: interpretation.anterior.band.key,
+        returnToSport: interpretation.rts.key,
       },
       report,
     };
@@ -93,7 +121,7 @@ export default function Home() {
     try {
       // Import dinâmico: mantém a biblioteca xlsx fora do bundle inicial.
       const { exportToExcel } = await import('@/lib/excel');
-      exportToExcel({ patient, limbs, reaches, results, report });
+      exportToExcel({ patient, limbs, reaches, results, interpretation, report });
       showToast('success', 'Arquivo Excel gerado com sucesso!');
     } catch (err) {
       console.error(err);
@@ -132,6 +160,8 @@ export default function Home() {
     setPatient(makePatient());
     setLimbs(makeLimbs());
     setReaches(makeReaches());
+    setPopulation(DEFAULT_POPULATION);
+    setInjuredSide(DEFAULT_INJURED);
     setReportEdited(false);
     showToast('success', 'Nova avaliação iniciada.');
   }
@@ -165,6 +195,13 @@ export default function Home() {
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:px-6 sm:py-6">
         <PatientForm patient={patient} onChange={setPatient} />
 
+        <ProfileCard
+          population={population}
+          injuredSide={injuredSide}
+          onPopulationChange={setPopulation}
+          onInjuredChange={setInjuredSide}
+        />
+
         <LimbLengthCard limbs={limbs} onChange={setLimbs} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -180,6 +217,8 @@ export default function Home() {
         </div>
 
         <ResultsDashboard results={results} />
+
+        <StratifiedInterpretation interpretation={interpretation} />
 
         <InterpretationCard
           results={results}

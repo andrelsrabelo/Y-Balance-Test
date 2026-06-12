@@ -30,6 +30,23 @@ Aplicação web fullstack para avaliação clínica do **Y-Balance Test — Lowe
 
 Valores não calculáveis (campos vazios, divisão por zero) são exibidos como `---`. Todos os resultados usam 1 casa decimal. Os inputs aceitam vírgula ou ponto como separador decimal.
 
+## Interpretação estratificada por população
+
+Além do dashboard genérico (limiar de 94% e assimetria de 4 cm), o app aplica uma camada de leitura clínica ajustada ao **perfil do avaliado**, selecionável em "Perfil Clínico e Contexto":
+
+| Perfil | Escore composto (adequado) | LSI (liberação) | Assimetria anterior (baixo risco) |
+| --- | --- | --- | --- |
+| Sedentário / baixa atividade | ≥ 85% | ≥ 90% | ≤ 4 cm |
+| Atleta recreacional / amador | ≥ 90% (ótimo ≥ 95%) | ≥ 90% (ótimo ≥ 94%) | ≤ 4 cm |
+| Atleta competitivo / elite | ≥ 100% (ótimo ≥ 106%) | ≥ 94% | ≤ 3 cm |
+| Adolescente (10–17 anos) | comparar ao percentil 50 (idade/sexo) | ≥ 90% | ≤ 4 cm (alta prevalência, cautela) |
+
+- **LSI (Limb Symmetry Index)** = `(membro lesionado ÷ contralateral) × 100`, usando os escores compostos. O avaliador indica o **membro lesionado** (Esquerdo/Direito); em modo **Triagem/preventivo** o LSI é calculado como `menor escore ÷ maior escore`.
+- **Direções posteriores (PM/PL)** recebem classificação normalizada própria (perfis recreacional e competitivo), por serem melhores preditoras de instabilidade crônica.
+- **Critérios objetivos de retorno ao esporte** combinam escore composto, LSI e assimetria anterior em três níveis (liberação / progressão parcial / manter restrições), com a ressalva de que dor e confiança subjetiva não são capturadas pelo instrumento.
+
+O perfil, o LSI e as classificações entram automaticamente no **laudo editável**, na **exportação Excel** e no **payload salvo no servidor**.
+
 ## Desenvolvimento local
 
 ```bash
@@ -72,12 +89,15 @@ src/
 │   ├── LimbLengthCard.jsx
 │   ├── LoginScreen.jsx                # Credenciais de acesso
 │   ├── PatientForm.jsx
+│   ├── ProfileCard.jsx                # Seleção de população e membro lesionado
 │   ├── ResultsDashboard.jsx           # Normalização, composto e assimetria
 │   ├── SectionCard.jsx
+│   ├── StratifiedInterpretation.jsx   # LSI, classificações por perfil e RTS
 │   ├── Toast.jsx
 │   └── inputs.jsx                     # Inputs com sanitização numérica
 └── lib/
     ├── calculations.js                # Regras de negócio e fórmulas do YBT
     ├── excel.js                       # Geração do arquivo .xlsx
+    ├── interpretation.js              # Limiares por população, LSI e retorno ao esporte
     └── report.js                      # Geração do texto do laudo
 ```

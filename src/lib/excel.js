@@ -16,8 +16,10 @@ function trialCell(raw) {
   return n === null ? '---' : n;
 }
 
+const sideSupport = (key) => (key === 'left' ? 'Apoio Esquerdo' : 'Apoio Direito');
+
 /** Gera e baixa o arquivo .xlsx com todos os dados da avaliação. */
-export function exportToExcel({ patient, limbs, reaches, results, report }) {
+export function exportToExcel({ patient, limbs, reaches, results, interpretation, report }) {
   const rows = [];
 
   rows.push(['Y-BALANCE TEST (YBT-LQ) — RELATÓRIO DE AVALIAÇÃO']);
@@ -28,6 +30,18 @@ export function exportToExcel({ patient, limbs, reaches, results, report }) {
   rows.push(['Data da Avaliação', cell(formatDateBR(patient.date))]);
   rows.push(['Idade', cell(patient.age)]);
   rows.push(['Avaliador', cell(patient.evaluator.trim())]);
+  if (interpretation) {
+    rows.push(['Perfil / População', cell(interpretation.population.label)]);
+    const inj = interpretation.injuredSide;
+    rows.push([
+      'Membro de referência (LSI)',
+      inj === 'left'
+        ? 'Esquerdo (lesionado)'
+        : inj === 'right'
+          ? 'Direito (lesionado)'
+          : 'Triagem / preventivo',
+    ]);
+  }
   rows.push([]);
 
   rows.push(['COMPRIMENTO DO MEMBRO (cm)']);
@@ -94,6 +108,59 @@ export function exportToExcel({ patient, limbs, reaches, results, report }) {
     ]);
   }
   rows.push([]);
+
+  if (interpretation) {
+    const it = interpretation;
+    rows.push([`INTERPRETAÇÃO ESTRATIFICADA — PERFIL ${it.population.label.toUpperCase()}`]);
+
+    rows.push(['Métrica', 'Valor', 'Classificação']);
+    rows.push([
+      'Escore Composto — Apoio Esquerdo',
+      fmt(it.composite.left.value, it.composite.left.value === null ? '' : '%'),
+      it.composite.left.band.label,
+    ]);
+    rows.push([
+      'Escore Composto — Apoio Direito',
+      fmt(it.composite.right.value, it.composite.right.value === null ? '' : '%'),
+      it.composite.right.band.label,
+    ]);
+
+    const lsiContext =
+      it.lsi.value === null
+        ? ''
+        : it.lsi.isScreening
+          ? ` (triagem: ${sideSupport(it.lsi.numeratorSide)} ÷ ${sideSupport(it.lsi.denominatorSide)})`
+          : ` (${sideSupport(it.lsi.numeratorSide)} lesionado ÷ contralateral)`;
+    rows.push([
+      `LSI — Índice de Simetria${lsiContext}`,
+      fmt(it.lsi.value, it.lsi.value === null ? '' : '%'),
+      it.lsi.band.label,
+    ]);
+
+    rows.push([
+      'Assimetria Anterior',
+      fmt(it.anterior.diff, it.anterior.diff === null ? '' : ' cm'),
+      it.anterior.band.label,
+    ]);
+
+    if (it.posterior.available) {
+      for (const dir of ['PM', 'PL']) {
+        rows.push([
+          `Posterior ${dir} — Apoio Esquerdo`,
+          fmt(results.normalized.left[dir], results.normalized.left[dir] === null ? '' : '%'),
+          it.posterior.left[dir].label,
+        ]);
+        rows.push([
+          `Posterior ${dir} — Apoio Direito`,
+          fmt(results.normalized.right[dir], results.normalized.right[dir] === null ? '' : '%'),
+          it.posterior.right[dir].label,
+        ]);
+      }
+    }
+
+    rows.push(['Retorno ao esporte (critérios objetivos)', '', it.rts.title]);
+    rows.push([]);
+  }
 
   rows.push(['LAUDO / INTERPRETAÇÃO CLÍNICA']);
   rows.push([report.trim() || '---']);
