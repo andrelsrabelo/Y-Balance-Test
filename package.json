@@ -1,0 +1,23 @@
+{
+  "name": "y-balance-test",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicação web para avaliação clínica do Y-Balance Test (YBT-LQ)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "lucide-react": "^0.460.0",
+    "next": "^14.2.32",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.17"
+  }
+}
